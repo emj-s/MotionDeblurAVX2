@@ -3,9 +3,10 @@
 #include <vector>
 #include <cstdint>
 #include <cstring>
+#include <immintrin.h>
+
 
 extern "C" void sobel_avx2(uint8_t* input, uint8_t* output, int width, int height);
-
 
 #pragma pack(push, 1)
 struct BMPHeader {
@@ -58,9 +59,27 @@ int main() {
     int width = dibHeader.width;
     int height = dibHeader.height;
 
+    if (width <= 0 || height <= 0) {
+        std::cerr << "Error: Invalid image dimensions! width=" << width << ", height=" << height << std::endl;
+        return 1;
+    }
+
     // Convert 4-bit grayscale to 8-bit grayscale
     std::vector<uint8_t> image8bit = convert4bitTo8bit(imageData, width, height);
     std::vector<uint8_t> outputImage(image8bit.size(), 0);
+
+
+    if (image8bit.empty() || outputImage.empty()) {
+        std::cerr << "Error: Image buffers are empty before calling sobel_avx2." << std::endl;
+        return 1;
+    }
+
+    if (image8bit.size() < (size_t)(width * height) || outputImage.size() < (size_t)(width * height)) {
+        std::cerr << "Error: Image buffer sizes are too small!" << std::endl;
+        std::cerr << "image8bit size: " << image8bit.size() << ", required: " << (width * height) << std::endl;
+        std::cerr << "outputImage size: " << outputImage.size() << ", required: " << (width * height) << std::endl;
+        return 1;
+    }
 
     // Apply Sobel filter using AVX2 NASM
     sobel_avx2(image8bit.data(), outputImage.data(), width, height);
@@ -89,6 +108,11 @@ bool loadBMP(const std::string& filename, BMPHeader& bmpHeader, DIBHeader& dibHe
     if (dibHeader.bitCount != 4) return false;  // Ensure it's a 4-bit BMP
 
     int imageSize = dibHeader.imageSize;
+    if (imageSize <= 0) {
+        std::cerr << "Error: Invalid image size in BMP header." << std::endl;
+        return false;
+    }
+
     imageData.resize(imageSize);
     file.seekg(bmpHeader.offset, std::ios::beg);
     file.read(reinterpret_cast<char*>(imageData.data()), imageSize);
@@ -110,19 +134,37 @@ bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBH
 
 // Convert 4-bit grayscale to 8-bit grayscale
 std::vector<uint8_t> convert4bitTo8bit(const std::vector<uint8_t>& imageData, int width, int height) {
+    if (imageData.empty()) {
+        std::cerr << "Error: Empty image data in convert4bitTo8bit." << std::endl;
+        return {};
+    }
+
     std::vector<uint8_t> output(width * height);
-    for (size_t i = 0, j = 0; i < imageData.size(); i++) {
-        output[j++] = (imageData[i] >> 4) * 17;
-        output[j++] = (imageData[i] & 0xF) * 17;
+    size_t j = 0;
+
+    for (size_t i = 0; i < imageData.size(); i++) {
+        if (j + 1 >= output.size()) break;  // Prevent out-of-bounds access
+
+        output.at(j++) = (imageData[i] >> 4) * 17;
+        output.at(j++) = (imageData[i] & 0xF) * 17;
     }
     return output;
 }
 
 // Convert 8-bit grayscale back to 4-bit grayscale
 std::vector<uint8_t> convert8bitTo4bit(const std::vector<uint8_t>& imageData, int width, int height) {
+    if (imageData.empty() || (width * height) % 2 != 0) {
+        std::cerr << "Error: Invalid image data in convert8bitTo4bit." << std::endl;
+        return {};
+    }
+
     std::vector<uint8_t> output((width * height) / 2);
-    for (size_t i = 0, j = 0; i < output.size(); i++) {
-        output[i] = ((imageData[j] / 17) << 4) | (imageData[j + 1] / 17);
+    size_t j = 0;
+
+    for (size_t i = 0; i < output.size(); i++) {
+        if (j + 1 >= imageData.size()) break;  // Prevent out-of-bounds access
+
+        output.at(i) = ((imageData.at(j) / 17) << 4) | (imageData.at(j + 1) / 17);
         j += 2;
     }
     return output;
