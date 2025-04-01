@@ -1,12 +1,12 @@
 #include <iostream>
-#include <fstream>
 #include <vector>
+#include <fstream>
 #include <cstdint>
 #include <cstring>
 #include <immintrin.h>
 
-
 extern "C" void sobel_avx2(uint8_t* input, uint8_t* output, int width, int height);
+extern "C" void wiener_avx2(uint8_t* input, uint8_t* output, int width, int height, double K);
 
 #pragma pack(push, 1)
 struct BMPHeader {
@@ -33,94 +33,58 @@ struct DIBHeader {
 #pragma pack(pop)
 
 // Function prototypes
-bool loadBMP(const std::string& filename, BMPHeader& bmpHeader, DIBHeader& dibHeader, std::vector<uint8_t>& imageData);
-bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBHeader& dibHeader, const std::vector<uint8_t>& imageData);
-std::vector<uint8_t> convert4bitTo8bit(const std::vector<uint8_t>& imageData, int width, int height);
-std::vector<uint8_t> convert8bitTo4bit(const std::vector<uint8_t>& imageData, int width, int height);
-
-int main() {
-    std::string inputFile = "C:\\dichi\\Term2\\MotionDeblurAVX2\\x64\\Debug\\input.bmp";
-    std::string outputFile = "C:\\dichi\\Term2\\MotionDeblurAVX2\\x64\\Debug\\output.bmp";
-
-    BMPHeader bmpHeader;
-    DIBHeader dibHeader;
-    std::vector<uint8_t> imageData;
-
-    if (!loadBMP(inputFile, bmpHeader, dibHeader, imageData)) {
-        std::cerr << "Error: Failed to load BMP file." << std::endl;
-        return 1;
-    }
-
-    if (dibHeader.bitCount != 4) {
-        std::cerr << "Error: Only 4-bit grayscale BMP is supported." << std::endl;
-        return 1;
-    }
-
-    int width = dibHeader.width;
-    int height = dibHeader.height;
-
-    if (width <= 0 || height <= 0) {
-        std::cerr << "Error: Invalid image dimensions! width=" << width << ", height=" << height << std::endl;
-        return 1;
-    }
-
-    // Convert 4-bit grayscale to 8-bit grayscale
-    std::vector<uint8_t> image8bit = convert4bitTo8bit(imageData, width, height);
-    std::vector<uint8_t> outputImage(image8bit.size(), 0);
-
-
-    if (image8bit.empty() || outputImage.empty()) {
-        std::cerr << "Error: Image buffers are empty before calling sobel_avx2." << std::endl;
-        return 1;
-    }
-
-    if (image8bit.size() < (size_t)(width * height) || outputImage.size() < (size_t)(width * height)) {
-        std::cerr << "Error: Image buffer sizes are too small!" << std::endl;
-        std::cerr << "image8bit size: " << image8bit.size() << ", required: " << (width * height) << std::endl;
-        std::cerr << "outputImage size: " << outputImage.size() << ", required: " << (width * height) << std::endl;
-        return 1;
-    }
-
-    // Apply Sobel filter using AVX2 NASM
-    sobel_avx2(image8bit.data(), outputImage.data(), width, height);
-
-    // Convert back to 4-bit (optional, if you want to save as 4-bit)
-    std::vector<uint8_t> output4bit = convert8bitTo4bit(outputImage, width, height);
-
-    // Save the output BMP
-    if (!saveBMP(outputFile, bmpHeader, dibHeader, output4bit)) {
-        std::cerr << "Error: Failed to save BMP file." << std::endl;
-        return 1;
-    }
-
-    std::cout << "Sobel filter applied successfully!" << std::endl;
-    return 0;
-}
-
-// Function to load a BMP file
 bool loadBMP(const std::string& filename, BMPHeader& bmpHeader, DIBHeader& dibHeader, std::vector<uint8_t>& imageData) {
     std::ifstream file(filename, std::ios::binary);
-    if (!file) return false;
 
-    file.read(reinterpret_cast<char*>(&bmpHeader), sizeof(BMPHeader));
-    file.read(reinterpret_cast<char*>(&dibHeader), sizeof(DIBHeader));
-
-    if (dibHeader.bitCount != 4) return false;  // Ensure it's a 4-bit BMP
-
-    int imageSize = dibHeader.imageSize;
-    if (imageSize <= 0) {
-        std::cerr << "Error: Invalid image size in BMP header." << std::endl;
+    if (!file) {
+        std::cerr << "Error: File not found: " << filename << std::endl;
         return false;
     }
 
+    std::cout << "Reading BMP headers..." << std::endl;
+
+    // Read BMP and DIB headers
+    file.read(reinterpret_cast<char*>(&bmpHeader), sizeof(BMPHeader));
+    file.read(reinterpret_cast<char*>(&dibHeader), sizeof(DIBHeader));
+
+    // Validate BMP type
+    if (bmpHeader.type != 0x4D42) { // 'BM' in hex
+        std::cerr << "Error: Invalid BMP file (not 'BM' type)." << std::endl;
+        return false;
+    }
+
+    // Validate that it's an 8-bit grayscale BMP
+    if (dibHeader.bitCount != 8) {
+        std::cerr << "Error: Unsupported BMP format. Expected 8-bit grayscale, but got "
+            << dibHeader.bitCount << "-bit." << std::endl;
+        return false;
+    }
+
+    // Fix invalid image size
+    int imageSize = dibHeader.imageSize;
+    if (imageSize <= 0) {
+        std::cerr << "Warning: Invalid image size in BMP header. Recalculating..." << std::endl;
+        imageSize = dibHeader.width * std::abs(dibHeader.height);
+    }
+
+    // Resize vector to hold image data
     imageData.resize(imageSize);
+
+    // Seek to pixel data and read it
     file.seekg(bmpHeader.offset, std::ios::beg);
     file.read(reinterpret_cast<char*>(imageData.data()), imageSize);
 
+    // Verify that the image data was read correctly
+    if (file.gcount() != imageSize) {
+        std::cerr << "Error: Failed to read the expected image data." << std::endl;
+        return false;
+    }
+
+    std::cout << "BMP file loaded successfully! Image size: " << imageSize << " bytes" << std::endl;
     return true;
 }
 
-// Function to save a BMP file
+
 bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBHeader& dibHeader, const std::vector<uint8_t>& imageData) {
     std::ofstream file(filename, std::ios::binary);
     if (!file) return false;
@@ -132,40 +96,38 @@ bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBH
     return true;
 }
 
-// Convert 4-bit grayscale to 8-bit grayscale
-std::vector<uint8_t> convert4bitTo8bit(const std::vector<uint8_t>& imageData, int width, int height) {
-    if (imageData.empty()) {
-        std::cerr << "Error: Empty image data in convert4bitTo8bit." << std::endl;
-        return {};
+int main() {
+    std::string inputFile = "C:\\Users\\Samantha Jade\\Downloads\\input.bmp";
+    std::string outputFile = "C:\\Users\\Samantha Jade\\Downloads\\output.bmp";
+
+    BMPHeader bmpHeader;
+    DIBHeader dibHeader;
+    std::vector<uint8_t> imageData;
+
+    if (!loadBMP(inputFile, bmpHeader, dibHeader, imageData)) {
+        std::cerr << "Error: Failed to load BMP file." << std::endl;
+        return 1;
     }
 
-    std::vector<uint8_t> output(width * height);
-    size_t j = 0;
-
-    for (size_t i = 0; i < imageData.size(); i++) {
-        if (j + 1 >= output.size()) break;  // Prevent out-of-bounds access
-
-        output.at(j++) = (imageData[i] >> 4) * 17;
-        output.at(j++) = (imageData[i] & 0xF) * 17;
-    }
-    return output;
-}
-
-// Convert 8-bit grayscale back to 4-bit grayscale
-std::vector<uint8_t> convert8bitTo4bit(const std::vector<uint8_t>& imageData, int width, int height) {
-    if (imageData.empty() || (width * height) % 2 != 0) {
-        std::cerr << "Error: Invalid image data in convert8bitTo4bit." << std::endl;
-        return {};
+    if (dibHeader.bitCount != 8) {
+        std::cerr << "Error: Only 8-bit grayscale BMP is supported." << std::endl;
+        return 1;
     }
 
-    std::vector<uint8_t> output((width * height) / 2);
-    size_t j = 0;
+    int width = dibHeader.width;
+    int height = dibHeader.height;
 
-    for (size_t i = 0; i < output.size(); i++) {
-        if (j + 1 >= imageData.size()) break;  // Prevent out-of-bounds access
+    std::vector<uint8_t> deblurredImage(imageData.size(), 0);
+    wiener_avx2(imageData.data(), deblurredImage.data(), width, height, 0.01);
 
-        output.at(i) = ((imageData.at(j) / 17) << 4) | (imageData.at(j + 1) / 17);
-        j += 2;
+    std::vector<uint8_t> sobelImage(imageData.size(), 0);
+    sobel_avx2(deblurredImage.data(), sobelImage.data(), width, height);
+
+    if (!saveBMP(outputFile, bmpHeader, dibHeader, sobelImage)) {
+        std::cerr << "Error: Failed to save BMP file." << std::endl;
+        return 1;
     }
-    return output;
+
+    std::cout << "Wiener deconvolution and Sobel filter applied successfully!" << std::endl;
+    return 0;
 }

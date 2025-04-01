@@ -23,5 +23,8 @@
     <CustomBuild Include="sobel_avx2.asm">
       <Filter>Source Files</Filter>
     </CustomBuild>
+    <CustomBuild Include="wiener_avx2.asm">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
