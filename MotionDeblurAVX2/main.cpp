@@ -286,6 +286,8 @@ int main() {
     std::cout << "Original 8-bit image: " << outputOriginal << std::endl;
     std::cout << "Wiener filtered image: " << outputWiener << std::endl;
     std::cout << "Sobel filtered image: " << outputSobel << std::endl;
+    std::cout << "Sobel filtered image pt2: " << outputSobel << std::endl;
+
 
     return 0;
 }
