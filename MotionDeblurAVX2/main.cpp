@@ -195,10 +195,10 @@ bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBH
 }
 
 int main() {
-    std::string inputFile = "C:\\Users\\Samantha Jade\\Downloads\\input.bmp";
-    std::string outputOriginal = "C:\\Users\\Samantha Jade\\Downloads\\original_8bit.bmp";
-    std::string outputWiener = "C:\\Users\\Samantha Jade\\Downloads\\wiener_output.bmp";
-    std::string outputSobel = "C:\\Users\\Samantha Jade\\Downloads\\sobel_output.bmp";
+    std::string inputFile = "C:\\Users\\Samantha Jade\\Downloads\\input2.bmp";
+    std::string outputOriginal = "C:\\Users\\Samantha Jade\\Downloads\\original_8bit2.bmp";
+    std::string outputWiener = "C:\\Users\\Samantha Jade\\Downloads\\wiener_output2.bmp";
+    std::string outputSobel = "C:\\Users\\Samantha Jade\\Downloads\\sobel_output2.bmp";
 
     BMPHeader bmpHeader;
     DIBHeader dibHeader;
@@ -227,16 +227,39 @@ int main() {
         return 1;
     }
 
+    /* **************** DEBUG **************** */
+    int zeroPixelsInput = 0;
+    for (auto pixel : imageData) {
+        if (pixel == 0) zeroPixelsInput++;
+    }
+    std::cout << "Zero pixels in input image: " << zeroPixelsInput << "/" << imageData.size() << std::endl;
+
+    // Add this before calling wiener_avx2
+    std::cout << "First 10 pixels of input: ";
+    for (int i = 0; i < 10; i++) {
+        std::cout << (int)imageData[i] << " ";
+    }
+    std::cout << std::endl;
+
     // Apply Wiener filter and save
-    std::vector<uint8_t> wienerImage(imageData.size(), 0);
+    std::vector<uint8_t> wienerImage(imageData.size(), 128);
     wiener_avx2(imageData.data(), wienerImage.data(), width, height, 0.5f); // Lower K value for more subtle effect
+
+    std::cout << "First 10 pixels of output: ";
+    for (int i = 0; i < 10; i++) {
+        std::cout << (int)wienerImage[i] << " ";
+    }
+    std::cout << std::endl;
 
     // Debug: Check if Wiener filter produced any non-zero pixels
     int nonZeroWiener = 0;
+    int zeroPixelsAfterWiener = 0;
     for (auto pixel : wienerImage) {
         if (pixel > 0) nonZeroWiener++;
     }
-    std::cout << "Wiener filter non-zero pixels: " << nonZeroWiener << "/" << wienerImage.size() << std::endl;
+    std::cout << "\nWiener filter non-zero pixels: " << nonZeroWiener << "/" << wienerImage.size() << std::endl;
+    std::cout << "Zero pixels after Wiener filter: " << zeroPixelsAfterWiener << "/" << wienerImage.size() << std::endl;
+
 
     if (!saveBMP(outputWiener, bmpHeader, dibHeader, wienerImage)) {
         std::cerr << "Error: Failed to save Wiener filtered image." << std::endl;
