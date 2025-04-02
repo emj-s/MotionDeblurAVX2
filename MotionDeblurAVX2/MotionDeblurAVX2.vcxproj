@@ -109,8 +109,10 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>sobel_avx2.obj;wiener_avx2.obj;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>"sobel_avx2.obj";"wiener_avx2.obj";%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>No</LargeAddressAware>
+      <AdditionalLibraryDirectories>
+      </AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -142,8 +144,6 @@
       <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">c:\nasm\nasm -f win64 sobel_avx2.asm</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">sobel_avx2.asm</Outputs>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
     <CustomBuild Include="wiener_avx2.asm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <FileType>Document</FileType>

@@ -1,7 +1,7 @@
 section .text
-global wiener_sequential
+global wiener_avx2
 
-wiener_sequential:
+wiener_avx2:
     push rbp
     mov rbp, rsp
     sub rsp, 32

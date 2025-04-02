@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <cstring>
 #include <immintrin.h>
+#include <chrono>  // Added for timing
 
 extern "C" void sobel_avx2(uint8_t* input, uint8_t* output, int width, int height);
 extern "C" void wiener_avx2(uint8_t* input, uint8_t* output, int width, int height, float K);
@@ -109,7 +110,7 @@ bool loadBMP(const std::string& filename, BMPHeader& bmpHeader, DIBHeader& dibHe
         int imageSize = rowSizeInBytes * std::abs(dibHeader.height);
 
         if (dibHeader.imageSize <= 0 || dibHeader.imageSize != imageSize) {
-            std::cerr << "Warning: Invalid image size in BMP header. Recalculating..." << std::endl;
+            std::cerr << "\nWarning: Invalid image size in BMP header. Recalculating...\n" << std::endl;
             dibHeader.imageSize = imageSize;
         }
 
@@ -124,7 +125,7 @@ bool loadBMP(const std::string& filename, BMPHeader& bmpHeader, DIBHeader& dibHe
             memcpy(&imageData[y * rowWidth], &rawData[y * rowSizeInBytes], rowWidth);
         }
 
-        std::cout << "BMP file loaded successfully! Image size: " << imageData.size() << " bytes" << std::endl;
+        std::cout << "BMP file loaded successfully! \nImage size: " << imageData.size() << " bytes" << std::endl;
         return true;
     }
     else {
@@ -190,7 +191,7 @@ bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBH
         return false;
     }
 
-    std::cout << "Successfully saved: " << filename << std::endl;
+    std::cout << "\nSuccessfully saved: " << filename << std::endl;
     return true;
 }
 
@@ -204,10 +205,18 @@ int main() {
     DIBHeader dibHeader;
     std::vector<uint8_t> imageData;
 
+    // Start timing for image load
+    auto start_load = std::chrono::high_resolution_clock::now();
+
     if (!loadBMP(inputFile, bmpHeader, dibHeader, imageData)) {
         std::cerr << "Error: Failed to load BMP file." << std::endl;
         return 1;
     }
+
+    // End timing for image load
+    auto end_load = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> load_time = end_load - start_load;
+    std::cout << "Image loading time: " << load_time.count() << " ms" << std::endl;
 
     // After loadBMP, the image should be converted to 8-bit if it was 4-bit
     if (dibHeader.bitCount != 8) {
@@ -241,10 +250,19 @@ int main() {
     }
     std::cout << std::endl;
 
+    // Start timing for Wiener filter
+    auto start_wiener = std::chrono::high_resolution_clock::now();
+
     // Apply Wiener filter and save
     std::vector<uint8_t> wienerImage(imageData.size(), 128);
     wiener_avx2(imageData.data(), wienerImage.data(), width, height, 0.5f); // Lower K value for more subtle effect
 
+    // End timing for Wiener filter
+    auto end_wiener = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> wiener_time = end_wiener - start_wiener;
+    std::cout << "Wiener filter execution time: " << wiener_time.count() << " ms" << std::endl;
+
+    /* **************** DEBUG **************** */
     std::cout << "First 10 pixels of output: ";
     for (int i = 0; i < 10; i++) {
         std::cout << (int)wienerImage[i] << " ";
@@ -256,6 +274,7 @@ int main() {
     int zeroPixelsAfterWiener = 0;
     for (auto pixel : wienerImage) {
         if (pixel > 0) nonZeroWiener++;
+        else zeroPixelsAfterWiener++;
     }
     std::cout << "\nWiener filter non-zero pixels: " << nonZeroWiener << "/" << wienerImage.size() << std::endl;
     std::cout << "Zero pixels after Wiener filter: " << zeroPixelsAfterWiener << "/" << wienerImage.size() << std::endl;
@@ -266,9 +285,17 @@ int main() {
         return 1;
     }
 
+    // Start timing for Sobel filter
+    auto start_sobel = std::chrono::high_resolution_clock::now();
+
     // Apply Sobel filter directly to the original image and save
     std::vector<uint8_t> sobelImage(imageData.size(), 0);
     sobel_avx2(imageData.data(), sobelImage.data(), width, height);
+
+    // End timing for Sobel filter
+    auto end_sobel = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> sobel_time = end_sobel - start_sobel;
+    std::cout << "Sobel filter execution time: " << sobel_time.count() << " ms" << std::endl;
 
     // Debug: Check if Sobel filter produced any non-zero pixels
     int nonZeroSobel = 0;
@@ -286,8 +313,6 @@ int main() {
     std::cout << "Original 8-bit image: " << outputOriginal << std::endl;
     std::cout << "Wiener filtered image: " << outputWiener << std::endl;
     std::cout << "Sobel filtered image: " << outputSobel << std::endl;
-    std::cout << "Sobel filtered image pt2: " << outputSobel << std::endl;
-
 
     return 0;
 }
