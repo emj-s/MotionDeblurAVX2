@@ -195,7 +195,7 @@ bool saveBMP(const std::string& filename, const BMPHeader& bmpHeader, const DIBH
 }
 
 int main() {
-    std::string inputFile = "C:\\Users\\Samantha Jade\\Downloads\\input2.bmp";
+    std::string inputFile = "C:\\Users\\Samantha Jade\\Downloads\\input.bmp";
     std::string outputOriginal = "C:\\Users\\Samantha Jade\\Downloads\\original_8bit.bmp";
     std::string outputWiener = "C:\\Users\\Samantha Jade\\Downloads\\wiener_output.bmp";
     std::string outputSobel = "C:\\Users\\Samantha Jade\\Downloads\\sobel_output.bmp";
@@ -218,15 +218,25 @@ int main() {
     int width = dibHeader.width;
     int height = std::abs(dibHeader.height); // Ensure height is positive
 
+    // Print image dimensions for debugging
+    std::cout << "Image dimensions: " << width << "x" << height << std::endl;
+
     // Save the original 8-bit image (after conversion if needed)
     if (!saveBMP(outputOriginal, bmpHeader, dibHeader, imageData)) {
         std::cerr << "Error: Failed to save original 8-bit image." << std::endl;
         return 1;
     }
 
-    // Apply Wiener filter and save - use a larger K value for more visible effect
+    // Apply Wiener filter and save
     std::vector<uint8_t> wienerImage(imageData.size(), 0);
-    wiener_avx2(imageData.data(), wienerImage.data(), width, height, 5.0f); // Increased K value
+    wiener_avx2(imageData.data(), wienerImage.data(), width, height, 0.5f); // Lower K value for more subtle effect
+
+    // Debug: Check if Wiener filter produced any non-zero pixels
+    int nonZeroWiener = 0;
+    for (auto pixel : wienerImage) {
+        if (pixel > 0) nonZeroWiener++;
+    }
+    std::cout << "Wiener filter non-zero pixels: " << nonZeroWiener << "/" << wienerImage.size() << std::endl;
 
     if (!saveBMP(outputWiener, bmpHeader, dibHeader, wienerImage)) {
         std::cerr << "Error: Failed to save Wiener filtered image." << std::endl;
@@ -236,6 +246,13 @@ int main() {
     // Apply Sobel filter directly to the original image and save
     std::vector<uint8_t> sobelImage(imageData.size(), 0);
     sobel_avx2(imageData.data(), sobelImage.data(), width, height);
+
+    // Debug: Check if Sobel filter produced any non-zero pixels
+    int nonZeroSobel = 0;
+    for (auto pixel : sobelImage) {
+        if (pixel > 0) nonZeroSobel++;
+    }
+    std::cout << "Sobel filter non-zero pixels: " << nonZeroSobel << "/" << sobelImage.size() << std::endl;
 
     if (!saveBMP(outputSobel, bmpHeader, dibHeader, sobelImage)) {
         std::cerr << "Error: Failed to save Sobel filtered image." << std::endl;
