@@ -14,12 +14,8 @@ The project utilizes Sobel filter for edge detection and Weiner deconvolution th
 
 
 
-
-![commandprompt](https://github.com/user-attachments/assets/a63ba4e2-c364-4954-8a32-66fa65fa9db8)
-
-
 ## Execution Screenshots
-
+![commandprompt](https://github.com/user-attachments/assets/a63ba4e2-c364-4954-8a32-66fa65fa9db8)
 ## Discussion of Execution times Sequential vs Parallel
 
 ## Execution time comparison
