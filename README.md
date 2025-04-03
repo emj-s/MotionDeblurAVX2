@@ -2,6 +2,7 @@
 # Project Proposal - *High-Performance Image Processing with SIMD: Real-Time Motion Deblurring*
 
 --- Link to video ---
+https://drive.google.com/file/d/1UQdDzEJRSzg4MnCgLF4M8W8EhH3C1pu6/view?usp=sharing
 
 --- Links to source codes ---
 
