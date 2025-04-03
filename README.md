@@ -17,11 +17,11 @@ The project utilizes Sobel filter for edge detection and Weiner deconvolution th
 ## Execution Screenshots
 ![commandprompt](https://github.com/user-attachments/assets/a63ba4e2-c364-4954-8a32-66fa65fa9db8)
 ## Discussion of Execution times Sequential vs Parallel
+![image](https://github.com/user-attachments/assets/4ca68021-7ed5-4d06-8930-3e78ecc44a53)
 
 ## Execution time comparison
-Filter	Sequential (ms)	Parallel (ms)	Speedup
-Wiener Filter	70.6054	76.0097	🔻 1.08x slower
-Sobel Filter	51.4555	42.6482	⚡ 1.21x faster
+![image](https://github.com/user-attachments/assets/1c48aaa1-3d53-4f5d-859c-1550c56afaa7)
+
 Observations:
 Sobel Filter Performance:
 The parallel Sobel filter is 1.21x faster, showing a noticeable improvement in execution time.
