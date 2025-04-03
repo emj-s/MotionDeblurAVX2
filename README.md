@@ -11,6 +11,10 @@ The proposed program is an AVX2-optimized deblurring pipeline that runs on NASM 
 
 The project utilizes Sobel filter for edge detection and Weiner deconvolution that will later be parallelized to optimize the performance and maximize CPU utilization.
 
+## output files:
+![image](https://github.com/user-attachments/assets/7d7f775b-101b-42cf-8777-e66ca49023b7)
+![image](https://github.com/user-attachments/assets/9356e1d4-f05f-4881-9a30-a40c19c0dad6)
+
 
 
 ## Execution Screenshots
