@@ -22,5 +22,18 @@ The project utilizes Sobel filter for edge detection and Weiner deconvolution th
 ## Discussion of Execution times Sequential vs Parallel
 
 ## Execution time comparison
+Filter	Sequential (ms)	Parallel (ms)	Speedup
+Wiener Filter	70.6054	76.0097	🔻 1.08x slower
+Sobel Filter	51.4555	42.6482	⚡ 1.21x faster
+Observations:
+Sobel Filter Performance:
+The parallel Sobel filter is 1.21x faster, showing a noticeable improvement in execution time.
+This suggests that AVX2 optimizations and memory access patterns are beneficial for edge detection.
 
+Wiener Filter Performance:
+Surprisingly, the parallel Wiener filter is 1.08x slower than the sequential version.
+what to improve in:
+Overhead from AVX2 instructions.
+Memory access inefficiencies.
+Potential bottlenecks in convolution or FFT computation.
 
