@@ -1,21 +1,15 @@
 
 # Project Proposal - *High-Performance Image Processing with SIMD: Real-Time Motion Deblurring*
 
+--- Link to video ---
+
+--- Links to source codes ---
+
 ## Description
 
-To include: (delete later)
-- Short project intro and dscription
-    - What is the project about?
-    - What are used in the project (Wiener and Sobel)
-    - How to use (step by step)
-- Why use AVX2 over CUDA?
+The proposed program is an AVX2-optimized deblurring pipeline that runs on NASM and C++. The aim of the project is to avchieve image deblurring with real-time performance while preserving the quality.
 
-
-
-## Discussion of parallel algorithims used
-AVX2 was the chosen language for the project due its universality in terms of hardware, where most systems can write/execute in AVX2. Compared to CUDA where it requires an NVIDIA graphics card for one to be able to program. Another reason for choosing AVX2 is because ...
-
-As explained earlier, the project makes use of Sobel filter for edge detection and Wiener deconvolution for ... These two are the main algorithims that will be parallelized in AVX2. T
+The project utilizes Sobel filter for edge detection and Weiner deconvolution that will later be parallelized to optimize the performance and maximize CPU utilization.
 
 
 
@@ -26,4 +20,6 @@ As explained earlier, the project makes use of Sobel filter for edge detection a
 
 ## Discussion of Execution times Sequential vs Parallel
 
-## Takeaways
+## Execution time comparison
+
+
